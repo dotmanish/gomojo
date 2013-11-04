@@ -1,24 +1,43 @@
-gomojo : Instamojo API tool written in Go
-=========================================
+gomojo : Instamojo API Wrapper written in Go
+============================================
 
-This is an API wrapper / command-line tool to interface with 
+This is an API wrapper package *and* a command-line tool to interface with 
 [Instamojo API](https://www.instamojo.com/developers/), written in Go.
 
 This is currently a work-in-progress, but then, what isn't in this world?
 
 I initially wrote bits of this for Instamojo integration with an app backend.
-At this stage, this acts like a command-line API tool. The next step in the
-process would be to integrate the other bits, and then abstract the
-functionality into a Golang package and retain the command-line tool as a 
-program which uses the package library.
+Now it's a Golang package that can be used to interact with the API.
+The latest is at https://github.com/dotmanish/gomojo
+
+    gomojo: is the Go package you can refer to from your Go sources.
+    gomojo-tool: is the command-line tool for using the API interactively.
 
 _Disclaimer_: I am not affiliated with Instamojo other than being one of
 their  merchant account customers. This (gomojo) is not officially
 endorsed by Instamojo team. That said, you should check out
 [Instamojo](https://www.instamojo.com/) if you haven't yet.
 
-Usage
-=====
+Install
+=======
+
+You would want to do
+
+    go get github.com/dotmanish/gomojo/gomojo-tool
+
+to download and install the *gomojo* package and the *gomojo-tool* binary.
+This requires you to have configured GOPATH variable correctly in your
+environment.
+
+If you only want to grab the *gomojo* package, just use
+
+    go get github.com/dotmanish/gomojo
+
+which will only retrieve the package, but not the command-line API tool.
+
+
+Command-Line Tool Usage
+=======================
 
 Currently Available actions:
 
@@ -56,23 +75,29 @@ Sample output for 'listoffers':
     ----------------------------
 
 
-Build
-=====
+API Wrapper Package Usage
+=========================
 
-You would want to do
+The source for *gomojo-tool* is a comprehensive sample for API wrapper usage.
+Check *gomojo-tool.go* for reference.
 
-    go build gomojo-tool.go
+Currently available APIs:
 
-to create the 'gomojo-tool' or 'gomojo-tool.exe' binary (depending upon your target platform).
-If you don't compile and build a binary beforehand, you can replace
+**Initialization:** 
 
-    gomojo-tool
+    InitGomojoWithAuthToken
+    InitGomojoWithUserPass
 
-with
+**Main APIs:**
 
-    go run gomojo-tool.go
+    ListOffers
+    GetNewAuthToken
+    DeleteAuthToken
 
-in the above usage examples.
+**Helper Functions:**
+
+    GetCurrentAuthToken
+
 
 License
 =======
