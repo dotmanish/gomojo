@@ -207,8 +207,7 @@ func deleteAuthToken(auth_token string) (bool, string) {
 	jsonerr := json.Unmarshal([]byte(api_result), jsonobj)
 
 	if jsonerr != nil {
-		fmt.Println("Invalid JSON: ", jsonerr.Error())
-		os.Exit(3)
+		jsonobj.Message = "Invalid JSON: " + jsonerr.Error()
 	}
 
 	return jsonobj.Success, jsonobj.Message
