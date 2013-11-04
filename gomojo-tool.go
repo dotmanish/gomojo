@@ -40,11 +40,14 @@ import (
 	"os"
 )
 
-type ListOffersResp struct {
+// ListOffersResponse: represents response of 'offer' API
+type ListOffersResponse struct {
 	Offers  []Offer `json:"offers"`
-	Success bool    `json:"status"`
+	Success bool    `json:"success"`
+	Message string  `json:"message"`
 }
 
+// Offer: represents one Offer object (in list of offers)
 type Offer struct {
 	ShortURL string `json:"shorturl"`
 	Title    string `json:"title"`
@@ -52,8 +55,22 @@ type Offer struct {
 	Status   string `json:"status"`
 }
 
+// AuthResponse: represents response of 'auth' POST API
+type AuthResponse struct {
+	Token   string `json:"token"`
+	Message string `json:"message"`
+	Success bool   `json:"success"`
+}
+
+// DeAuthResponse: represents response of 'auth' DELETE API
+type DeAuthResponse struct {
+	Message string `json:"message"`
+	Success bool   `json:"success"`
+}
+
 var cmd_action, cmd_app_id, cmd_auth_token, cmd_username, cmd_passwd, cmd_api_ver string
 var authenticated_in_current bool
+var gomojo_version string
 
 // Note to people who may read this for learning:
 // There are multiple sophisticated command-line option parsers available for Go
@@ -71,10 +88,13 @@ func init() {
 
 }
 
+// initParams: For command-line usage support
 func initParams() {
 
 	var paramsOkay bool
 	paramsOkay = true
+
+	gomojo_version = "1.0.2"
 
 	flag.Parse()
 
@@ -90,6 +110,7 @@ func initParams() {
 	}
 
 	if !paramsOkay {
+		fmt.Printf("* gomojo v %s from https://github.com/dotmanish/gomojo\n\n", gomojo_version)
 		fmt.Print("Usage: gomojo-tool -action <Action> -app <App IP> [-token <Auth Token>] [-user <Username>] [-passwd <Password>]\n\n")
 		fmt.Print("Currently Available actions: auth, deauth, listoffers\n")
 		fmt.Print("Example: gomojo-tool -action listoffers -app <your App-ID> -token <auth token>\n")
@@ -99,47 +120,110 @@ func initParams() {
 
 }
 
-func filterOutputAPI(apicall string) {
-
-	api_result := callAPI(apicall)
+// processCommandLineAPI: Main handler for command-line usage
+// The responsibility of this function is to make sure that
+// we display on-screen what's happening and show the API responses
+func processCommandLineAPI(apicall string) {
 
 	if apicall == "listoffers" {
 
-		jsonobj := new(ListOffersResp)
-		jsonerr := json.Unmarshal([]byte(api_result), jsonobj)
+		offers, list_success, list_message := listOffers()
 
-		if jsonerr != nil {
-			fmt.Println("Invalid JSON: ", jsonerr.Error())
-			os.Exit(3)
-		} else {
-			fmt.Printf("Total %d Offers\n", len(jsonobj.Offers))
+		fmt.Println("List Offers API Success:", list_success)
+		fmt.Println("List Offers API Message:", list_message)
+		fmt.Printf("Total %d Offers\n", len(offers))
+		fmt.Println("----------------------------")
+
+		for iter := range offers {
+			offer := offers[iter]
+			fmt.Println("Offer #", iter+1)
+			fmt.Println("Status:", offer.Status)
+			fmt.Println("Title:", offer.Title)
+			fmt.Println("Slug:", offer.Slug)
+			fmt.Println("ShortURL:", offer.ShortURL)
 			fmt.Println("----------------------------")
-
-			for iter := range jsonobj.Offers {
-				offer := jsonobj.Offers[iter]
-				fmt.Println("Offer #", iter+1)
-				fmt.Println("Status: ", offer.Status)
-				fmt.Println("Title: ", offer.Title)
-				fmt.Println("Slug: ", offer.Slug)
-				fmt.Println("ShortURL: ", offer.ShortURL)
-				fmt.Println("----------------------------")
-			}
 		}
 
-	} else {
-		fmt.Println(api_result)
+	} else if apicall == "auth" {
+
+		auth_token, auth_success, auth_message := getNewAuthToken(cmd_username, cmd_passwd)
+
+		fmt.Println("New Auth Token:", auth_token)
+		fmt.Println("Auth API Success:", auth_success)
+		fmt.Println("Auth API Message:", auth_message)
+
+	} else if apicall == "deauth" {
+
+		deauth_success, deauth_message := deleteAuthToken(cmd_auth_token)
+
+		fmt.Println("Delete-Auth API Success:", deauth_success)
+		fmt.Println("Delete-Auth API Message:", deauth_message)
 	}
 
 }
 
-// Valid apicall values:
-// "auth", "deauth", "listoffers"
-func callAPI(apicall string) string {
+// listOffers: deletes an existing Auth Token
+// Inputs: None
+// Returns: (Offer object array, API success bool, Message string)
+func listOffers() ([]Offer, bool, string) {
+
+	api_result := callAPI("listoffers", "")
+
+	jsonobj := new(ListOffersResponse)
+	jsonerr := json.Unmarshal([]byte(api_result), jsonobj)
+
+	if jsonerr != nil {
+		jsonobj.Message = "Invalid JSON: " + jsonerr.Error()
+	}
+
+	return jsonobj.Offers, jsonobj.Success, jsonobj.Message
+}
+
+// getNewAuthToken: gets a new Auth Token
+// Inputs: (Username string, Password string)
+// Returns: (Auth Token string, API success bool, Message string)
+func getNewAuthToken(username, password string) (string, bool, string) {
+
+	api_result := callAPI("auth", "username="+cmd_username+"&password="+cmd_passwd)
+
+	jsonobj := new(AuthResponse)
+	jsonerr := json.Unmarshal([]byte(api_result), jsonobj)
+
+	if jsonerr != nil {
+		jsonobj.Message = "Invalid JSON: " + jsonerr.Error()
+	}
+
+	return jsonobj.Token, jsonobj.Success, jsonobj.Message
+}
+
+// deleteAuthToken: deletes an existing Auth Token
+// Inputs: (Auth Token string)
+// Returns: (API success bool, Message string)
+func deleteAuthToken(auth_token string) (bool, string) {
+
+	api_result := callAPI("deauth", auth_token)
+
+	jsonobj := new(DeAuthResponse)
+	jsonerr := json.Unmarshal([]byte(api_result), jsonobj)
+
+	if jsonerr != nil {
+		fmt.Println("Invalid JSON: ", jsonerr.Error())
+		os.Exit(3)
+	}
+
+	return jsonobj.Success, jsonobj.Message
+}
+
+// callAPI: Main function handling the REST API
+// Valid apicall values: "auth", "deauth", "listoffers"
+func callAPI(apicall, apidata string) string {
 
 	// Check if we have auth token available.
 	// If not, let's first authenticate and retrieve it.
 	if apicall != "auth" && cmd_auth_token == "" {
-		cmd_auth_token = callAPI("auth")
+
+		cmd_auth_token, _, _ = getNewAuthToken(cmd_username, cmd_passwd)
+
 		if cmd_auth_token != "" {
 			// This flag will later tell us if we should delete this auth token
 			// since we specifically created this only for current session.
@@ -161,10 +245,10 @@ func callAPI(apicall string) string {
 	// Decide on the HTTP Method and Parameters
 	if apicall == "auth" {
 		api_method = "POST"
-		param_data = ([]byte)("username=" + cmd_username + "&password=" + cmd_passwd + "&debug=true")
+		param_data = ([]byte)(apidata)
 	} else if apicall == "deauth" {
 		api_method = "DELETE"
-		apicall = "auth/:" + cmd_auth_token
+		apicall = "auth/" + apidata
 	} else if apicall == "listoffers" {
 		api_method = "GET"
 		apicall = "offer"
@@ -187,16 +271,12 @@ func callAPI(apicall string) string {
 
 		resp, resperr := client.Do(req)
 		if resperr != nil {
-			fmt.Print("Error connecting to or retrieving response from API URL. Please check connectivity.\n")
-			fmt.Print("API URL: " + api_url + "\n")
-			os.Exit(2)
+			api_result = "{\"success\":false, \"message\":\"Error connecting to or retrieving response from API URL. Please check connectivity. API URL: " + api_url + "\" }"
+		} else {
+			defer resp.Body.Close()
+			bodybytes, _ := ioutil.ReadAll(resp.Body)
+			api_result = string(bodybytes)
 		}
-
-		defer resp.Body.Close()
-
-		bodybytes, _ := ioutil.ReadAll(resp.Body)
-
-		api_result = string(bodybytes)
 	}
 
 	return api_result
@@ -206,9 +286,9 @@ func main() {
 
 	initParams()
 
-	filterOutputAPI(cmd_action)
+	processCommandLineAPI(cmd_action)
 
 	if authenticated_in_current {
-		filterOutputAPI("deauth")
+		processCommandLineAPI("deauth")
 	}
 }
