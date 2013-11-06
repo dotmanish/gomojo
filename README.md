@@ -41,11 +41,14 @@ Command-Line Tool Usage
 
 Currently Available actions:
 
-    auth, deauth, listoffers
+    auth, deauth, listoffers, offerdetails
 
 Example usage of the command-line API tool:
 
     gomojo-tool -action listoffers -app <your App-ID> -token <auth token>
+
+    gomojo-tool -action offerdetails -offerslug <offer slug> -app <your App-ID> -token <auth token>
+
 
 If you don't have a pre-generated Auth Token, you can either generate one first like this
 
@@ -81,7 +84,16 @@ API Wrapper Package Usage
 The source for *gomojo-tool* is a comprehensive sample for API wrapper usage.
 Check *gomojo-tool.go* for reference.
 
-Currently available APIs:
+Typical usage would entail:
+
+1. import "github.com/dotmanish/gomojo"
+
+2. call InitGomojoWithAuthToken() or InitGomojoWithUserPass()
+   
+3. call the Main APIs or Helper Functions
+    
+
+**Currently available APIs:**
 
 **Initialization:** 
 
@@ -91,6 +103,7 @@ Currently available APIs:
 **Main APIs:**
 
     ListOffers
+    GetOfferDetails
     GetNewAuthToken
     DeleteAuthToken
 

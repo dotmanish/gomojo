@@ -11,11 +11,13 @@
 //
 // Currently Available actions:
 //
-// auth, deauth, listoffers
+// auth, deauth, listoffers, offerdetails
 //
 // Example usage of the command-line API tool:
 //
 // gomojo-tool -action listoffers -app <your App-ID> -token <auth token>
+//
+// gomojo-tool -action offerdetails -offerslug <offer slug> -app <your App-ID> -token <auth token>
 //
 // If you don't have a pre-generated Auth Token, you can either generate one first like this
 //
@@ -39,6 +41,7 @@ import (
 )
 
 var cmd_action, cmd_app_id, cmd_auth_token, cmd_username, cmd_passwd, cmd_api_ver string
+var cmd_offer_slug string
 var authenticated_in_current bool
 
 // Note to people who may read this for learning:
@@ -53,6 +56,7 @@ func init() {
 	flag.StringVar(&cmd_auth_token, "token", "", "Auth Token")
 	flag.StringVar(&cmd_username, "user", "", "Username (for Auth)")
 	flag.StringVar(&cmd_passwd, "passwd", "", "Password (for Auth)")
+	flag.StringVar(&cmd_offer_slug, "offerslug", "", "Offer Slug")
 	flag.StringVar(&cmd_api_ver, "version", "1", "API Version (default 1)")
 
 }
@@ -67,14 +71,17 @@ func initParams() {
 
 	flag.Parse()
 
-	if cmd_action != "auth" && cmd_action != "deauth" && cmd_action != "listoffers" {
-		fmt.Print("You must specify the action on command line: 'auth', 'deauth', 'listoffers'\n\n")
+	if cmd_action != "auth" && cmd_action != "deauth" && cmd_action != "listoffers" && cmd_action != "offerdetails" {
+		fmt.Print("You must specify the action on command line: 'auth', 'deauth', 'listoffers', 'offerdetails'\n\n")
 		paramsOkay = false
 	} else if cmd_app_id == "" {
 		fmt.Print("You must specify the App-ID from command line via the '-app' parameter.\n\n")
 		paramsOkay = false
 	} else if cmd_auth_token == "" && (cmd_username == "" || cmd_passwd == "") {
 		fmt.Print("If 'token' is not supplied, then both 'user' and 'password' parameters must be supplied from command line.\n\n")
+		paramsOkay = false
+	} else if cmd_action == "offerdetails" && cmd_offer_slug == "" {
+		fmt.Print("You must specifiy the Offer Slug via the command line option -offerslug to get offer details.\n\n")
 		paramsOkay = false
 	}
 
@@ -110,6 +117,32 @@ func processCommandLineAPI(apicall string) {
 			fmt.Println("Title:", offer.Title)
 			fmt.Println("Slug:", offer.Slug)
 			fmt.Println("ShortURL:", offer.ShortURL)
+			fmt.Println("----------------------------")
+		}
+
+	} else if apicall == "offerdetails" {
+
+		offer, details_success, details_message := gomojo.GetOfferDetails(cmd_offer_slug)
+
+		fmt.Println("Offer Details API Success:", details_success)
+		fmt.Println("Offer Details API Message:", details_message)
+
+		if details_success {
+			fmt.Println("----------------------------")
+			fmt.Println("Status:", offer.Status)
+			fmt.Println("Title:", offer.Title)
+			fmt.Println("Slug:", offer.Slug)
+			fmt.Println("ShortURL:", offer.ShortURL)
+			fmt.Println("Base Price:", offer.BasePrice)
+			fmt.Println("Currency:", offer.Currency)
+			fmt.Println("Quantity:", offer.Quantity)
+			fmt.Println("Start Date:", offer.StartDate)
+			fmt.Println("End Date:", offer.EndDate)
+			fmt.Println("Timezone:", offer.Timezone)
+			fmt.Println("Venue:", offer.Venue)
+			fmt.Println("RedirectURL:", offer.RedirectURL)
+			fmt.Println("Note:", offer.Note)
+			fmt.Println("Description:", offer.Description)
 			fmt.Println("----------------------------")
 		}
 

@@ -17,6 +17,7 @@
 //
 // Main APIs:
 // 		ListOffers
+//		GetOfferDetails
 // 		GetNewAuthToken
 // 		DeleteAuthToken
 //
@@ -40,6 +41,13 @@ type ListOffersResponse struct {
 	Message string  `json:"message"`
 }
 
+// OfferDetailsResponse: represents response of 'offer' details API
+type OfferDetailsResponse struct {
+	Offer   Offer  `json:"offer"`
+	Success bool   `json:"success"`
+	Message string `json:"message"`
+}
+
 // AuthResponse: represents response of 'auth' POST API
 type AuthResponse struct {
 	Token   string `json:"token"`
@@ -54,11 +62,26 @@ type DeAuthResponse struct {
 }
 
 // Offer: represents one Offer object (in list of offers)
+// This is an amalgamation of the fields received as a
+// result of various APIs (Offers List / Offer Details)
+// Note that Offers List API doesn't populate everything.
 type Offer struct {
-	ShortURL string `json:"shorturl"`
-	Title    string `json:"title"`
-	Slug     string `json:"slug"`
-	Status   string `json:"status"`
+	ShortURL       string `json:"shorturl"`
+	Title          string `json:"title"`
+	Slug           string `json:"slug"`
+	Status         string `json:"status"`
+	Description    string `json:"description"`
+	Currency       string `json:"currency"`
+	BasePrice      string `json:"base_price"`
+	Quantity       string `json:"quantity"`
+	StartDate      string `json:"start_date"`
+	EndDate        string `json:"end_date"`
+	Timezone       string `json:"timezone"`
+	Venue          string `json:"venue"`
+	RedirectURL    string `json:"redirect_url"`
+	Note           string `json:"note"`
+	FileUploadJSON string `json:"file_upload_json"`
+	CoverImageJSON string `json:"cover_image_json"`
 }
 
 var gomojo_app_id, gomojo_auth_token, gomojo_api_ver, gomojo_version string
@@ -109,7 +132,7 @@ func SetCurrentAuthToken(auth_token string) {
 	gomojo_auth_token = auth_token
 }
 
-// ListOffers: deletes an existing Auth Token
+// ListOffers: retrieves the list of all offers created under the given App(ID)
 // Inputs: None
 // Returns: (Offer object array, API success bool, Message string)
 func ListOffers() ([]Offer, bool, string) {
@@ -130,6 +153,29 @@ func ListOffers() ([]Offer, bool, string) {
 	}
 
 	return jsonobj.Offers, jsonobj.Success, jsonobj.Message
+}
+
+// GetOfferDetails: retrieves the details of a particular offer
+// Inputs: (Offer-Slug string)
+// Returns: (Offer object, API success bool, Message string)
+func GetOfferDetails(offer_slug string) (Offer, bool, string) {
+
+	jsonobj := new(OfferDetailsResponse)
+
+	if gomojo_init_done {
+
+		api_result := callAPI("offerdetails", offer_slug)
+
+		jsonerr := json.Unmarshal([]byte(api_result), jsonobj)
+
+		if jsonerr != nil {
+			jsonobj.Message = "Invalid JSON: " + jsonerr.Error()
+		}
+	} else {
+		jsonobj.Message = "Please call gomojo.InitGomojoWithAuthToken() or gomojo.InitGomojoWithUserPass() first."
+	}
+
+	return jsonobj.Offer, jsonobj.Success, jsonobj.Message
 }
 
 // GetNewAuthToken: gets a new Auth Token
@@ -216,6 +262,9 @@ func callAPI(apicall, apidata string) string {
 	} else if apicall == "listoffers" {
 		api_method = "GET"
 		apicall = "offer"
+	} else if apicall == "offerdetails" {
+		api_method = "GET"
+		apicall = "offer/" + apidata
 	} else {
 		api_method = "GET"
 	}
