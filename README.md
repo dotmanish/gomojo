@@ -41,13 +41,15 @@ Command-Line Tool Usage
 
 Currently Available actions:
 
-    auth, deauth, listoffers, offerdetails
+    auth, deauth, listoffers, offerdetails, archiveoffer
 
 Example usage of the command-line API tool:
 
     gomojo-tool -action listoffers -app <your App-ID> -token <auth token>
 
     gomojo-tool -action offerdetails -offerslug <offer slug> -app <your App-ID> -token <auth token>
+
+    gomojo-tool -action archiveoffer -offerslug <offer slug> -app <your App-ID> -token <auth token>
 
 
 If you don't have a pre-generated Auth Token, you can either generate one first like this
@@ -104,6 +106,7 @@ Typical usage would entail:
 
     ListOffers
     GetOfferDetails
+    ArchiveOffer
     GetNewAuthToken
     DeleteAuthToken
 

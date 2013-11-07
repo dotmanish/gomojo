@@ -18,6 +18,7 @@
 // Main APIs:
 // 		ListOffers
 //		GetOfferDetails
+//		ArchiveOffer
 // 		GetNewAuthToken
 // 		DeleteAuthToken
 //
@@ -46,6 +47,12 @@ type OfferDetailsResponse struct {
 	Offer   Offer  `json:"offer"`
 	Success bool   `json:"success"`
 	Message string `json:"message"`
+}
+
+// ArchiveResponse: represents response of 'archiveoffer' DELETE API
+type ArchiveResponse struct {
+	Message string `json:"message"`
+	Success bool   `json:"success"`
 }
 
 // AuthResponse: represents response of 'auth' POST API
@@ -178,6 +185,29 @@ func GetOfferDetails(offer_slug string) (Offer, bool, string) {
 	return jsonobj.Offer, jsonobj.Success, jsonobj.Message
 }
 
+// ArchiveOffer: archives s an existing Offer
+// Inputs: (Offer Slug string)
+// Returns: (API success bool, Message string)
+func ArchiveOffer(offer_slug string) (bool, string) {
+
+	jsonobj := new(ArchiveResponse)
+
+	if gomojo_init_done {
+
+		api_result := callAPI("archiveoffer", offer_slug)
+
+		jsonerr := json.Unmarshal([]byte(api_result), jsonobj)
+
+		if jsonerr != nil {
+			jsonobj.Message = "Invalid JSON: " + jsonerr.Error()
+		}
+	} else {
+		jsonobj.Message = "Please call gomojo.InitGomojoWithAuthToken() or gomojo.InitGomojoWithUserPass() first."
+	}
+
+	return jsonobj.Success, jsonobj.Message
+}
+
 // GetNewAuthToken: gets a new Auth Token
 // Inputs: (Username string, Password string)
 // Returns: (Auth Token string, API success bool, Message string)
@@ -264,6 +294,9 @@ func callAPI(apicall, apidata string) string {
 		apicall = "offer"
 	} else if apicall == "offerdetails" {
 		api_method = "GET"
+		apicall = "offer/" + apidata
+	} else if apicall == "archiveoffer" {
+		api_method = "DELETE"
 		apicall = "offer/" + apidata
 	} else {
 		api_method = "GET"

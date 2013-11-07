@@ -11,13 +11,15 @@
 //
 // Currently Available actions:
 //
-// auth, deauth, listoffers, offerdetails
+// auth, deauth, listoffers, offerdetails, archiveoffer
 //
 // Example usage of the command-line API tool:
 //
 // gomojo-tool -action listoffers -app <your App-ID> -token <auth token>
 //
 // gomojo-tool -action offerdetails -offerslug <offer slug> -app <your App-ID> -token <auth token>
+//
+// gomojo-tool -action archiveoffer -offerslug <offer slug> -app <your App-ID> -token <auth token>
 //
 // If you don't have a pre-generated Auth Token, you can either generate one first like this
 //
@@ -71,8 +73,8 @@ func initParams() {
 
 	flag.Parse()
 
-	if cmd_action != "auth" && cmd_action != "deauth" && cmd_action != "listoffers" && cmd_action != "offerdetails" {
-		fmt.Print("You must specify the action on command line: 'auth', 'deauth', 'listoffers', 'offerdetails'\n\n")
+	if cmd_action != "auth" && cmd_action != "deauth" && cmd_action != "listoffers" && cmd_action != "offerdetails" && cmd_action != "archiveoffer" {
+		fmt.Print("You must specify the action on command line: 'auth', 'deauth', 'listoffers', 'offerdetails', 'archiveoffer'\n\n")
 		paramsOkay = false
 	} else if cmd_app_id == "" {
 		fmt.Print("You must specify the App-ID from command line via the '-app' parameter.\n\n")
@@ -83,12 +85,15 @@ func initParams() {
 	} else if cmd_action == "offerdetails" && cmd_offer_slug == "" {
 		fmt.Print("You must specifiy the Offer Slug via the command line option -offerslug to get offer details.\n\n")
 		paramsOkay = false
+	} else if cmd_action == "archiveoffer" && cmd_offer_slug == "" {
+		fmt.Print("You must specifiy the Offer Slug via the command line option -offerslug to archive the offer.\n\n")
+		paramsOkay = false
 	}
 
 	if !paramsOkay {
 		fmt.Printf("* gomojo v %s from https://github.com/dotmanish/gomojo\n\n", gomojo_version)
-		fmt.Print("Usage: gomojo-tool -action <Action> -app <App IP> [-token <Auth Token>] [-user <Username>] [-passwd <Password>]\n\n")
-		fmt.Print("Currently Available actions: auth, deauth, listoffers\n")
+		fmt.Print("Usage: gomojo-tool -action <Action> -app <App IP> [-token <Auth Token>] [-user <Username>] [-passwd <Password>] [-offer offer-slug]\n\n")
+		fmt.Print("Currently Available actions: auth, deauth, listoffers, offerdetails, archiveoffer\n")
 		fmt.Print("Example: gomojo-tool -action listoffers -app <your App-ID> -token <auth token>\n")
 		fmt.Print("Example: gomojo-tool -action listoffers -app <your App-ID> -user <your username> -passwd <your password>\n")
 		os.Exit(1)
@@ -162,6 +167,13 @@ func processCommandLineAPI(apicall string) {
 
 		fmt.Println("Delete-Auth API Success:", deauth_success)
 		fmt.Println("Delete-Auth API Message:", deauth_message)
+	
+	} else if apicall == "archiveoffer" {
+
+		archive_success, archive_message := gomojo.ArchiveOffer(cmd_offer_slug)
+
+		fmt.Println("Archive-Offer API Success:", archive_success)
+		fmt.Println("Archive-Offer API Message:", archive_message)
 	}
 
 }
