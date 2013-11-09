@@ -19,6 +19,7 @@
 // 		ListOffers
 //		GetOfferDetails
 //		ArchiveOffer
+//		UploadFile
 // 		GetNewAuthToken
 // 		DeleteAuthToken
 //
@@ -33,6 +34,10 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
+	"os"
+	"mime/multipart"
+	"path/filepath"
+	"io"
 )
 
 // ListOffersResponse: represents response of 'offer' API
@@ -53,6 +58,14 @@ type OfferDetailsResponse struct {
 type ArchiveResponse struct {
 	Message string `json:"message"`
 	Success bool   `json:"success"`
+}
+
+// FileUploadResonse: represents response of 'getfileuploadurl' POST API
+type FileUploadResonse struct {
+	UploadURL string `json:"upload_url"`
+	Message string `json:"message"`
+	Success bool   `json:"success"`
+	UploadJSON string // Additional field populated later with upload response JSON
 }
 
 // AuthResponse: represents response of 'auth' POST API
@@ -185,7 +198,7 @@ func GetOfferDetails(offer_slug string) (Offer, bool, string) {
 	return jsonobj.Offer, jsonobj.Success, jsonobj.Message
 }
 
-// ArchiveOffer: archives s an existing Offer
+// ArchiveOffer: archives an existing Offer
 // Inputs: (Offer Slug string)
 // Returns: (API success bool, Message string)
 func ArchiveOffer(offer_slug string) (bool, string) {
@@ -194,7 +207,7 @@ func ArchiveOffer(offer_slug string) (bool, string) {
 
 	if gomojo_init_done {
 
-		api_result := callAPI("archiveoffer", offer_slug)
+		api_result := callAPI("offer", offer_slug)
 
 		jsonerr := json.Unmarshal([]byte(api_result), jsonobj)
 
@@ -206,6 +219,78 @@ func ArchiveOffer(offer_slug string) (bool, string) {
 	}
 
 	return jsonobj.Success, jsonobj.Message
+}
+
+// UploadFile: uploads a File (content) or Cover Image
+// Inputs: (File Path string)
+// Returns: (API success bool, APUI Message string, UploadURL string, Upload-File JSON string)
+func UploadFile(file_path string) (bool, string, string, string) {
+
+	jsonobj := new(FileUploadResonse)
+
+	if gomojo_init_done {
+
+		api_result := callAPI("getfileuploadurl", "")
+
+		jsonerr := json.Unmarshal([]byte(api_result), jsonobj)
+
+		if jsonerr != nil {
+			jsonobj.Message = "Invalid JSON: " + jsonerr.Error()
+		}
+	} else {
+		jsonobj.Message = "Please call gomojo.InitGomojoWithAuthToken() or gomojo.InitGomojoWithUserPass() first."
+	}
+
+	if jsonobj.Success {
+
+		// Check for file existence and readability
+		file, err := os.Open(file_path)
+		if err != nil {
+		  jsonobj.Message = err.Error()
+		} else {
+			defer file.Close()
+
+			  body := &bytes.Buffer{}
+			  writer := multipart.NewWriter(body)
+			  part, err := writer.CreateFormFile("fileUpload", filepath.Base(file_path))
+			  if err != nil {
+			      jsonobj.Message = err.Error()
+			  } else {
+				   _, err = io.Copy(part, file)
+				  
+				  err = writer.Close()
+				  if err != nil {
+				    jsonobj.Message = err.Error()
+				  } else {
+
+				  	client := &http.Client{}
+					request, _ := http.NewRequest("POST", jsonobj.UploadURL, body)
+					
+				  	resp, err := client.Do(request)
+					if err != nil {
+						jsonobj.Message = err.Error()
+					} else {
+						respbody := &bytes.Buffer{}
+						_, err := respbody.ReadFrom(resp.Body)
+					    if err != nil {
+							jsonobj.Message = err.Error()
+						} else {
+							resp.Body.Close()
+					    	jsonobj.UploadJSON = respbody.String()
+						}
+					    
+					}
+
+				  }
+			  }
+			  
+
+
+		}
+
+	}
+
+	return jsonobj.Success, jsonobj.Message, jsonobj.UploadURL, jsonobj.UploadJSON
 }
 
 // GetNewAuthToken: gets a new Auth Token
@@ -298,6 +383,9 @@ func callAPI(apicall, apidata string) string {
 	} else if apicall == "archiveoffer" {
 		api_method = "DELETE"
 		apicall = "offer/" + apidata
+	} else if apicall == "getfileuploadurl" {
+		api_method = "GET"
+		apicall = "offer/" + "get_file_upload_url"
 	} else {
 		api_method = "GET"
 	}

@@ -107,6 +107,7 @@ Typical usage would entail:
     ListOffers
     GetOfferDetails
     ArchiveOffer
+    UploadFile
     GetNewAuthToken
     DeleteAuthToken
 
