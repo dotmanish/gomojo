@@ -20,6 +20,7 @@
 //		GetOfferDetails
 //		ArchiveOffer
 //		UploadFile
+//		CreateOffer
 // 		GetNewAuthToken
 // 		DeleteAuthToken
 //
@@ -38,6 +39,7 @@ import (
 	"mime/multipart"
 	"path/filepath"
 	"io"
+	"net/url"
 )
 
 // ListOffersResponse: represents response of 'offer' API
@@ -47,7 +49,7 @@ type ListOffersResponse struct {
 	Message string  `json:"message"`
 }
 
-// OfferDetailsResponse: represents response of 'offer' details API
+// OfferDetailsResponse: represents response of 'offer' details and 'createoffer' API
 type OfferDetailsResponse struct {
 	Offer   Offer  `json:"offer"`
 	Success bool   `json:"success"`
@@ -293,6 +295,43 @@ func UploadFile(file_path string) (bool, string, string, string) {
 	return jsonobj.Success, jsonobj.Message, jsonobj.UploadURL, jsonobj.UploadJSON
 }
 
+// CreateOffer: create a new offer
+// Inputs: (Offer object)
+// Returns: (Offer object, API success bool, Message string)
+func CreateOffer(offer Offer) (Offer, bool, string) {
+
+	jsonobj := new(OfferDetailsResponse)
+
+	if gomojo_init_done {
+
+		api_data := "title=" + url.QueryEscape(offer.Title) +
+			"&description=" + url.QueryEscape(offer.Description) +
+			"&currency=" + url.QueryEscape(offer.Currency) +
+			"&base_price=" + url.QueryEscape(offer.BasePrice) +
+			"&quantity=" + url.QueryEscape(offer.Quantity) +
+			"&start_date=" + url.QueryEscape(offer.StartDate) +
+			"&end_date=" + url.QueryEscape(offer.EndDate) +
+			"&timezone=" + url.QueryEscape(offer.Timezone) +
+			"&venue=" + url.QueryEscape(offer.Venue) +
+			"&redirect_url=" + url.QueryEscape(offer.RedirectURL) +
+			"&note=" + url.QueryEscape(offer.Note) +
+			"&file_upload_json=" + url.QueryEscape(offer.FileUploadJSON) +
+			"&cover_image_json=" + url.QueryEscape(offer.CoverImageJSON)
+
+		api_result := callAPI("createoffer", api_data)
+
+		jsonerr := json.Unmarshal([]byte(api_result), jsonobj)
+
+		if jsonerr != nil {
+			jsonobj.Message = "Invalid JSON: " + jsonerr.Error()
+		}
+	} else {
+		jsonobj.Message = "Please call gomojo.InitGomojoWithAuthToken() or gomojo.InitGomojoWithUserPass() first."
+	}
+
+	return jsonobj.Offer, jsonobj.Success, jsonobj.Message
+}
+
 // GetNewAuthToken: gets a new Auth Token
 // Inputs: (Username string, Password string)
 // Returns: (Auth Token string, API success bool, Message string)
@@ -386,6 +425,10 @@ func callAPI(apicall, apidata string) string {
 	} else if apicall == "getfileuploadurl" {
 		api_method = "GET"
 		apicall = "offer/" + "get_file_upload_url"
+	} else if apicall == "createoffer" {
+		api_method = "POST"
+		apicall = "offer"
+		param_data = ([]byte)(apidata)
 	} else {
 		api_method = "GET"
 	}
