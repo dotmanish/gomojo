@@ -109,6 +109,7 @@ Typical usage would entail:
     ArchiveOffer
     UploadFile
     CreateOffer
+    UpdateOffer
     GetNewAuthToken
     DeleteAuthToken
 

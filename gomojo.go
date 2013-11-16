@@ -21,6 +21,7 @@
 //		ArchiveOffer
 //		UploadFile
 //		CreateOffer
+//		UpdateOffer
 // 		GetNewAuthToken
 // 		DeleteAuthToken
 //
@@ -49,7 +50,7 @@ type ListOffersResponse struct {
 	Message string  `json:"message"`
 }
 
-// OfferDetailsResponse: represents response of 'offer' details and 'createoffer' API
+// OfferDetailsResponse: represents response of 'offer' details,'createoffer','updateoffer' API
 type OfferDetailsResponse struct {
 	Offer   Offer  `json:"offer"`
 	Success bool   `json:"success"`
@@ -163,7 +164,7 @@ func ListOffers() ([]Offer, bool, string) {
 
 	if gomojo_init_done {
 
-		api_result := callAPI("listoffers", "")
+		api_result := callAPI("listoffers", "", "")
 
 		jsonerr := json.Unmarshal([]byte(api_result), jsonobj)
 
@@ -186,7 +187,7 @@ func GetOfferDetails(offer_slug string) (Offer, bool, string) {
 
 	if gomojo_init_done {
 
-		api_result := callAPI("offerdetails", offer_slug)
+		api_result := callAPI("offerdetails", offer_slug, "")
 
 		jsonerr := json.Unmarshal([]byte(api_result), jsonobj)
 
@@ -209,7 +210,7 @@ func ArchiveOffer(offer_slug string) (bool, string) {
 
 	if gomojo_init_done {
 
-		api_result := callAPI("offer", offer_slug)
+		api_result := callAPI("offer", offer_slug, "")
 
 		jsonerr := json.Unmarshal([]byte(api_result), jsonobj)
 
@@ -232,7 +233,7 @@ func UploadFile(file_path string) (bool, string, string, string) {
 
 	if gomojo_init_done {
 
-		api_result := callAPI("getfileuploadurl", "")
+		api_result := callAPI("getfileuploadurl", "", "")
 
 		jsonerr := json.Unmarshal([]byte(api_result), jsonobj)
 
@@ -318,7 +319,44 @@ func CreateOffer(offer Offer) (Offer, bool, string) {
 			"&file_upload_json=" + url.QueryEscape(offer.FileUploadJSON) +
 			"&cover_image_json=" + url.QueryEscape(offer.CoverImageJSON)
 
-		api_result := callAPI("createoffer", api_data)
+		api_result := callAPI("createoffer", "", api_data)
+
+		jsonerr := json.Unmarshal([]byte(api_result), jsonobj)
+
+		if jsonerr != nil {
+			jsonobj.Message = "Invalid JSON: " + jsonerr.Error()
+		}
+	} else {
+		jsonobj.Message = "Please call gomojo.InitGomojoWithAuthToken() or gomojo.InitGomojoWithUserPass() first."
+	}
+
+	return jsonobj.Offer, jsonobj.Success, jsonobj.Message
+}
+
+// UpdateOffer: update an existing offer
+// Inputs: (Offer-slug string, Offer object)
+// Returns: (Offer object, API success bool, Message string)
+func UpdateOffer(offer_slug string, offer Offer) (Offer, bool, string) {
+
+	jsonobj := new(OfferDetailsResponse)
+
+	if gomojo_init_done {
+
+		api_data := "title=" + url.QueryEscape(offer.Title) +
+			"&description=" + url.QueryEscape(offer.Description) +
+			"&currency=" + url.QueryEscape(offer.Currency) +
+			"&base_price=" + url.QueryEscape(offer.BasePrice) +
+			"&quantity=" + url.QueryEscape(offer.Quantity) +
+			"&start_date=" + url.QueryEscape(offer.StartDate) +
+			"&end_date=" + url.QueryEscape(offer.EndDate) +
+			"&timezone=" + url.QueryEscape(offer.Timezone) +
+			"&venue=" + url.QueryEscape(offer.Venue) +
+			"&redirect_url=" + url.QueryEscape(offer.RedirectURL) +
+			"&note=" + url.QueryEscape(offer.Note) +
+			"&file_upload_json=" + url.QueryEscape(offer.FileUploadJSON) +
+			"&cover_image_json=" + url.QueryEscape(offer.CoverImageJSON)
+
+		api_result := callAPI("updateoffer", offer_slug, api_data)
 
 		jsonerr := json.Unmarshal([]byte(api_result), jsonobj)
 
@@ -341,7 +379,7 @@ func GetNewAuthToken(username, password string) (string, bool, string) {
 
 	if gomojo_init_done {
 
-		api_result := callAPI("auth", "username="+username+"&password="+password)
+		api_result := callAPI("auth", "", "username="+username+"&password="+password)
 
 		jsonerr := json.Unmarshal([]byte(api_result), jsonobj)
 
@@ -364,7 +402,7 @@ func DeleteAuthToken(auth_token string) (bool, string) {
 
 	if gomojo_init_done {
 
-		api_result := callAPI("deauth", auth_token)
+		api_result := callAPI("deauth", auth_token, "")
 
 		jsonerr := json.Unmarshal([]byte(api_result), jsonobj)
 
@@ -380,7 +418,7 @@ func DeleteAuthToken(auth_token string) (bool, string) {
 
 // callAPI: Internal function handling the REST API
 // Valid apicall values: "auth", "deauth", "listoffers"
-func callAPI(apicall, apidata string) string {
+func callAPI(apicall, apitarget, apidata string) string {
 
 	// Check if we have auth token available.
 	// If not, let's first authenticate and retrieve it.
@@ -412,22 +450,26 @@ func callAPI(apicall, apidata string) string {
 		param_data = ([]byte)(apidata)
 	} else if apicall == "deauth" {
 		api_method = "DELETE"
-		apicall = "auth/" + apidata
+		apicall = "auth/" + apitarget
 	} else if apicall == "listoffers" {
 		api_method = "GET"
 		apicall = "offer"
 	} else if apicall == "offerdetails" {
 		api_method = "GET"
-		apicall = "offer/" + apidata
+		apicall = "offer/" + apitarget
 	} else if apicall == "archiveoffer" {
 		api_method = "DELETE"
-		apicall = "offer/" + apidata
+		apicall = "offer/" + apitarget
 	} else if apicall == "getfileuploadurl" {
 		api_method = "GET"
 		apicall = "offer/" + "get_file_upload_url"
 	} else if apicall == "createoffer" {
 		api_method = "POST"
 		apicall = "offer"
+		param_data = ([]byte)(apidata)
+	}  else if apicall == "updateoffer" {
+		api_method = "PATCH"
+		apicall = "offer/" + apitarget
 		param_data = ([]byte)(apidata)
 	} else {
 		api_method = "GET"
